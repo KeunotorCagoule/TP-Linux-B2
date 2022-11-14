@@ -924,6 +924,28 @@ Created symlink /etc/systemd/system/multi-user.target.wants/web.service → /etc
 - créer un fichier dans le dossier `/var/www/meow/` (peu importe son nom ou son contenu, c'est pour tester)
 - montrez à l'aide d'une commande les permissions positionnées sur le dossier et son contenu
 
+```bash
+[toto@node2 /]$ cd var/
+[toto@node2 var]$ sudo mkdir www
+[toto@node2 var]$ cd www/
+[toto@node2 www]$ sudo mkdir meow
+[toto@node2 var]$ cd meow/
+[toto@node2 meow]$ sudo nano coucou
+```
+
+```bash
+# changement de propriétaire du dossier et du fichier
+[toto@node2 www]$ sudo chown web meow
+[toto@node2 www]$ ls -l
+total 0
+drwxr-xr-x. 2 web root 20 Nov 14 22:03 meow
+[toto@node2 www]$ cd meow
+[toto@node2 meow]$ sudo chown web coucou
+[toto@node2 meow]$ ls -l
+total 4
+-rw-r--r--. 1 web root 7 Nov 14 22:03 coucou
+```
+
 > Pour que tout fonctionne correctement, il faudra veiller à ce que le dossier et le fichier appartiennent à l'utilisateur `web` et qu'il ait des droits suffisants dessus.
 
 🌞 **Modifiez l'unité de service `web.service` créée précédemment en ajoutant les clauses**
@@ -932,4 +954,64 @@ Created symlink /etc/systemd/system/multi-user.target.wants/web.service → /etc
 - `WorkingDirectory=` afin de lancer le serveur depuis le dossier créé au dessus : `/var/www/meow/`
 - ces deux clauses sont à positionner dans la section `[Service]` de votre unité
 
+```bash
+# modification du service
+[toto@node2 ~]$ sudo nano /etc/systemd/system/web.service
+[toto@node2 ~]$ cat /etc/systemd/system/web.service
+[Unit]
+Description=Very simple web service
+
+[Service]
+ExecStart=/bin/python3 -m http.server 8888
+User=web
+WorkingDirectory=/var/www/meow/
+
+[Install]
+WantedBy=multi-user.target
+```
+
 🌞 **Vérifiez le bon fonctionnement avec une commande `curl`**
+
+```bash
+# relecture des fichiers de configuration
+[toto@node2 ~]$ sudo systemctl daemon-reload
+```
+
+```bash
+# vérification du fonctionnement
+[toto@node1 ~]$ curl 10.101.1.12:8888
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Directory listing for /</title>
+</head>
+<body>
+<h1>Directory listing for /</h1>
+<hr>
+<ul>
+<li><a href="afs/">afs/</a></li>
+<li><a href="bin/">bin@</a></li>
+<li><a href="boot/">boot/</a></li>
+<li><a href="dev/">dev/</a></li>
+<li><a href="etc/">etc/</a></li>
+<li><a href="home/">home/</a></li>
+<li><a href="lib/">lib@</a></li>
+<li><a href="lib64/">lib64@</a></li>
+<li><a href="media/">media/</a></li>
+<li><a href="mnt/">mnt/</a></li>
+<li><a href="opt/">opt/</a></li>
+<li><a href="proc/">proc/</a></li>
+<li><a href="root/">root/</a></li>
+<li><a href="run/">run/</a></li>
+<li><a href="sbin/">sbin@</a></li>
+<li><a href="srv/">srv/</a></li>
+<li><a href="sys/">sys/</a></li>
+<li><a href="tmp/">tmp/</a></li>
+<li><a href="usr/">usr/</a></li>
+<li><a href="var/">var/</a></li>
+</ul>
+<hr>
+</body>
+</html>
+```
