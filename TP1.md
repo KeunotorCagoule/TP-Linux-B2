@@ -801,12 +801,40 @@ ExecStart=/bin/python3 -m http.server 8888
 WantedBy=multi-user.target
 ```
 
+```bash
+# création du service
+[toto@node2 ~]$ sudo nano /etc/systemd/system/web.service
+[sudo] password for toto:
+[toto@node2 ~]$ cat /etc/systemd/system/web.service
+[Unit]
+Description=Very simple web service
+
+[Service]
+ExecStart=/bin/python3 -m http.server 8888
+
+[Install]
+WantedBy=multi-user.target
+```
+
 Le but de cette unité est de lancer un serveur web sur le port 8888 de la machine. **N'oubliez pas d'ouvrir ce port dans le firewall.**
+
+```bash
+# ouverture du port
+[toto@node2 ~]$ sudo firewall-cmd --add-port=8888/tcp --permanent
+success
+[toto@node2 ~]$ sudo firewall-cmd --reload
+success
+```
 
 Une fois l'unité de service créée, il faut demander à *systemd* de relire les fichiers de configuration :
 
 ```bash
 $ sudo systemctl daemon-reload
+```
+
+```bash
+# relecture des fichiers de configuration
+[toto@node2 ~]$ sudo systemctl daemon-reload
 ```
 
 Enfin, on peut interagir avec notre unité :
@@ -817,11 +845,75 @@ $ sudo systemctl start web
 $ sudo systemctl enable web
 ```
 
+```bash
+# affichage du statut du service
+[toto@node2 ~]$ sudo systemctl status web
+○ web.service - Very simple web service
+     Loaded: loaded (/etc/systemd/system/web.service; disabled; vendor pres>
+     Active: inactive (dead)
+
+# lancement du service
+[toto@node2 ~]$ sudo systemctl start web
+[toto@node2 ~]$ sudo systemctl enable web
+Created symlink /etc/systemd/system/multi-user.target.wants/web.service → /etc/systemd/system/web.service.
+
+# vérification du statut du service
+[toto@node2 ~]$ sudo systemctl status web
+● web.service - Very simple web service
+     Loaded: loaded (/etc/systemd/system/web.service; enabled; vendor prese>
+     Active: active (running) since Mon 2022-11-14 21:47:23 CET; 10s ago
+   Main PID: 1105 (python3)
+      Tasks: 1 (limit: 5896)
+     Memory: 9.2M
+        CPU: 104ms
+     CGroup: /system.slice/web.service
+             └─1105 /bin/python3 -m http.server 8888
+```
+
 🌞 **Une fois le service démarré, assurez-vous que pouvez accéder au serveur web**
 
 - avec un navigateur depuis votre PC
 - ou la commande `curl` depuis l'autre machine (je veux ça dans le compte-rendu :3)
 - sur l'IP de la VM, port 8888
+
+```bash
+# accès au serveur web
+[toto@node1 ~]$ curl 10.101.1.12:8888
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Directory listing for /</title>
+</head>
+<body>
+<h1>Directory listing for /</h1>
+<hr>
+<ul>
+<li><a href="afs/">afs/</a></li>
+<li><a href="bin/">bin@</a></li>
+<li><a href="boot/">boot/</a></li>
+<li><a href="dev/">dev/</a></li>
+<li><a href="etc/">etc/</a></li>
+<li><a href="home/">home/</a></li>
+<li><a href="lib/">lib@</a></li>
+<li><a href="lib64/">lib64@</a></li>
+<li><a href="media/">media/</a></li>
+<li><a href="mnt/">mnt/</a></li>
+<li><a href="opt/">opt/</a></li>
+<li><a href="proc/">proc/</a></li>
+<li><a href="root/">root/</a></li>
+<li><a href="run/">run/</a></li>
+<li><a href="sbin/">sbin@</a></li>
+<li><a href="srv/">srv/</a></li>
+<li><a href="sys/">sys/</a></li>
+<li><a href="tmp/">tmp/</a></li>
+<li><a href="usr/">usr/</a></li>
+<li><a href="var/">var/</a></li>
+</ul>
+<hr>
+</body>
+</html>
+```
 
 ### B. Modification de l'unité
 
