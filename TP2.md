@@ -535,7 +535,7 @@ Le flow va être le suivant :
 
 ```sh
 # installation de mariadb
-[roxanne@node2 ~]$ sudo dnf install mariadb-server
+[roxanne@db ~]$ sudo dnf install mariadb-server
 [sudo] password for roxanne:
 Rocky Linux 9 - BaseOS                      8.2 kB/s | 3.6 kB     00:00
 Rocky Linux 9 - BaseOS                      2.1 MB/s | 1.7 MB     00:00
@@ -544,15 +544,15 @@ Rocky Linux 9 - BaseOS                      2.1 MB/s | 1.7 MB     00:00
 
 ```sh
 # lancement de mariadb
-[roxanne@node2 ~]$ sudo systemctl enable mariadb
+[roxanne@db ~]$ sudo systemctl enable mariadb
 Created symlink /etc/systemd/system/mysql.service → /usr/lib/systemd/system/mariadb.service.
 Created symlink /etc/systemd/system/mysqld.service → /usr/lib/systemd/system/mariadb.service.
 Created symlink /etc/systemd/system/multi-user.target.wants/mariadb.service → /usr/lib/systemd/system/mariadb.service.
-[roxanne@node2 ~]$ sudo systemctl start mariadb
+[roxanne@db ~]$ sudo systemctl start mariadb
 ```
 
 ```sh
-[roxanne@node2 ~]$ sudo mysql_secure_installation
+[roxanne@db ~]$ sudo mysql_secure_installation
 
 NOTE: RUNNING ALL PARTS OF THIS SCRIPT IS RECOMMENDED FOR ALL MariaDB
       SERVERS IN PRODUCTION USE!  PLEASE READ EACH STEP CAREFULLY!
@@ -630,9 +630,9 @@ Dependencies resolved.
 
 ```sh
 # ouverture du port de Mariadb sur la machien db.tp2.linux
-[roxanne@node2 ~]$ sudo firewall-cmd --add-port=3306/tcp --permanent
+[roxanne@db ~]$ sudo firewall-cmd --add-port=3306/tcp --permanent
 success
-[roxanne@node2 ~]$ sudo firewall-cmd --reload
+[roxanne@db ~]$ sudo firewall-cmd --reload
 success
 ```
 
@@ -668,7 +668,7 @@ SHOW TABLES;
 Une fois qu'on s'est assurés qu'on peut se co au service de base de données depuis `web.tp2.linux`, on peut continuer.
 
 ```sql
-[roxanne@node2 ~]$ sudo mysql -u root -p
+[roxanne@db ~]$ sudo mysql -u root -p
 [...]
 
 MariaDB [(none)]> SELECT user FROM mysql.user;
@@ -879,7 +879,32 @@ drwxr-xr-x.  2 apache apache    43 Oct  6 14:44 updater
 </VirtualHost>
 ```
 
+```sh
+# vérification du fichier de conf pour savoir comment créer le fichier de conf supplémentaire
+[roxanne@web ~]$ sudo cat /etc/httpd/conf/httpd.conf
+
+# création du fichier de conf supplémentaire
+[roxanne@web ~]$ sudo nano /etc/httpd/conf.d/nextcloud.conf
+[roxanne@web ~]$ cat /etc/httpd/conf.d/nextcloud.conf
+<VirtualHost *:80>
+  DocumentRoot /var/www/tp2_nextcloud/
+  ServerName  web.tp2.linux
+  <Directory /var/www/tp2_nextcloud/>
+    Require all granted
+    AllowOverride All
+    Options FollowSymLinks MultiViews
+    <IfModule mod_dav.c>
+      Dav off
+    </IfModule>
+  </Directory>
+</VirtualHost>
+```
+
 🌞 **Redémarrer le service Apache** pour qu'il prenne en compte le nouveau fichier de conf
+
+```sh
+[roxanne@web ~]$ sudo systemctl restart httpd
+```
 
 ### C. Finaliser l'installation de NextCloud
 
@@ -901,5 +926,31 @@ drwxr-xr-x.  2 apache apache    43 Oct  6 14:44 updater
 🌞 **Exploration de la base de données**
 
 - connectez vous en ligne de commande à la base de données après l'installation terminée
+
+```sh
+# connexion à la base de données
+[roxanne@web ~]$ mysql -u nextcloud -h 10.102.1.12 -p
+Enter password:
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 52
+Server version: 5.5.5-10.5.16-MariaDB MariaDB Server
+```
+
 - déterminer combien de tables ont été crées par NextCloud lors de la finalisation de l'installation
   - ***bonus points*** si la réponse à cette question est automatiquement donnée par une requête SQL
+
+```sh
+mysql> USE nextcloud;
+Reading table information for completion of table and column names
+You can turn off this feature to get a quicker startup with -A
+
+Database changed
+mysql> SELECT COUNT(*) AS CMPT FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TY
+PE = 'BASE TABLE';
++------+
+| CMPT |
++------+
+|   95 |
++------+
+1 row in set (0.00 sec)
+```
