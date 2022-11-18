@@ -22,6 +22,26 @@ Enfin, un *timer* permettra de déclencher l'exécution du *service* à interval
 - l'idée est d'avoir un utilisateur qui est dédié aux dumps de la base
   - votre script l'utilisera pour se connecter à la base et extraire les données
 
+```sql
+MariaDB [(none)]> CREATE USER 'restore'@'10.102.1.11' IDENTIFIED BY 'toto';
+Query OK, 0 rows affected (0.002 sec)
+
+MariaDB [(none)]> RENAME USER 'restore'@'10.102.1.11' to 'restore'@'localhost';
+Query OK, 0 rows affected (0.003 sec)
+
+MariaDB [(none)]> GRANT ALL PRIVILEGES ON nextcloud.* TO 'restore'@'localhos
+t';
+Query OK, 0 rows affected (0.001 sec)
+
+MariaDB [(none)]> FLUSH PRIVILEGES;
+Query OK, 0 rows affected (0.001 sec)
+```
+
+```sh
+# au dessus
+# on a créé un utilisateur 'restore'@'localhost' qui a tous les droits sur la base de données 'nextcloud' sur la machine db.tp2.linux
+```
+
 ➜ **Ecrire le script `bash`**
 
 - il s'appellera `tp3_db_dump.sh`
@@ -44,6 +64,47 @@ Enfin, un *timer* permettra de déclencher l'exécution du *service* à interval
   - au format `.zip` ou `.tar.gz`
   - le fichier produit sera stocké dans le dossier `/srv/db_dumps/`
   - il doit comporter la date, l'heure la minute et la seconde où a été effectué le dump
+
+```sh
+# création du fichier du script
+[roxanne@db srv]$ sudo nano tp3_db_dump.sh
+[sudo] password for roxanne:
+```
+
+```sh
+[roxanne@db srv]$ cat tp3_db_dump.sh
+#!/bin/bash
+# Last Update : 18/11/2022
+# Written by : Roulland Roxanne
+# This script will dump the database and save it to a file
+
+# Set the variables
+user='restore'
+passwd='toto'
+db='nextcloud'
+ip_serv='10.102.1.12'
+datelog=$(date '+[%y/%m/%d %T]')
+datesauv=$(date '+%y%m%d_%H%M%S')
+name=nextcloud_'$datesauv'
+backuppath='/srv/db_dumps'
+
+# Dump the database
+if [["$(id -u)" = "0"]]
+then
+        mkdir -p ${backuppath}
+        echo "Backup started for database - ${db}."
+        mysqldump -h ${ip_serv} -u ${user} -p${passwd} ${db} | gzip &get; ${backuppath}/${name}
+        if [$? -eq 0]; then
+                echo "Backup successfully completed."
+        else
+                echo "Backup failed."
+                exit 1
+        fi
+else
+        echo "You must be root to run this script"
+        exit 1
+fi
+```
 
 > On utilise la notation américaine de la date `yymmdd` avec l'année puis le mois puis le jour, comme ça, un tri alphabétique des fichiers correspond à un tri dans l'ordre temporel :)
 
@@ -68,6 +129,10 @@ toto="tata"
 echo "$toto"
 ```
 
+```sh
+# DONE :D
+```
+
 ---
 
 ➜ **Commentez le script**
@@ -76,6 +141,10 @@ echo "$toto"
   - date d'écriture du script
   - nom/pseudo de celui qui l'a écrit
   - un résumé TRES BREF de ce que fait le script
+
+```sh
+Done too 
+```
 
 ---
 
