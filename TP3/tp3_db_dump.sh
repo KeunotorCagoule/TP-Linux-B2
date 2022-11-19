@@ -7,25 +7,22 @@
 user='restore'
 passwd='toto'
 db='nextcloud'
-ip_serv='10.102.1.12'
-datelog=$(date '+[%y/%m/%d %T]')
+ip_serv='localhost'
 datesauv=$(date '+%y%m%d_%H%M%S')
-name='$db'_'$datesauv'
-backuppath='/srv/db_dumps'
+name='${db}_${datesauv}'
+outputpath="/srv/db_dumps/${name}.sql"
 
 # Dump the database
-if [["$(id -u)" = "0"]]
+
+echo "Backup started for database - ${db}."
+mysqldump -h ${ip_serv} -u ${user} -p${passwd} --skip-lock-tables --databases ${db} > $outputpath
+if [[ $? == 0 ]]
 then
-        mkdir -p ${backuppath}
-        echo "Backup started for database - ${db}."
-        mysqldump -h ${ip_serv} -u ${user} -p${passwd} ${db} | gzip &get; ${backuppath}/${name}
-        if [$? -eq 0]; then
-                echo "Backup successfully completed."
-        else 
-                echo "Backup failed."
-                exit 1
-        fi
-else
-        echo "You must be root to run this script"
+        gzip -c $outputpath > '${outputpath}.gz'
+        rm -f $outputpath
+        echo "Backup successfully completed."
+else 
+        echo "Backup failed."
+        rm -f outputpath
         exit 1
 fi

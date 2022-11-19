@@ -72,6 +72,11 @@ Query OK, 0 rows affected (0.001 sec)
 ```
 
 ```sh
+# on choisit de faire la sauvegarde de la db sur le node master puisque notre nextcloud n'est pas très solicité nous n'aurons donc pas de problème de performance.
+# si on avait choisi de faire la sauvegarde sur le node slave, on aurait cependant perdu des données car le node slave aurait peut-être eu un décalage avec les données du node master. On aurait eu un problème d'intégrité.
+```
+
+```sh
 [roxanne@db srv]$ cat tp3_db_dump.sh
 #!/bin/bash
 # Last Update : 18/11/2022
@@ -82,29 +87,32 @@ Query OK, 0 rows affected (0.001 sec)
 user='restore'
 passwd='toto'
 db='nextcloud'
-ip_serv='10.102.1.12'
-datelog=$(date '+[%y/%m/%d %T]')
+ip_serv='localhost'
 datesauv=$(date '+%y%m%d_%H%M%S')
-name=nextcloud_'$datesauv'
-backuppath='/srv/db_dumps'
+name='${db}_${datesauv}'
+outputpath="/srv/db_dumps/${name}.sql"
 
 # Dump the database
-if [["$(id -u)" = "0"]]
+
+echo "Backup started for database - ${db}."
+mysqldump -h ${ip_serv} -u ${user} -p${passwd} --skip-lock-tables --databases ${db} > $outputpath
+if [[ $? == 0 ]]
 then
-        mkdir -p ${backuppath}
-        echo "Backup started for database - ${db}."
-        mysqldump -h ${ip_serv} -u ${user} -p${passwd} ${db} | gzip &get; ${backuppath}/${name}
-        if [$? -eq 0]; then
-                echo "Backup successfully completed."
-        else
-                echo "Backup failed."
-                exit 1
-        fi
-else
-        echo "You must be root to run this script"
+        gzip -c $outputpath > '${outputpath}.gz'
+        rm -f $outputpath
+        echo "Backup successfully completed."
+else 
+        echo "Backup failed."
+        rm -f outputpath
         exit 1
 fi
 ```
+
+```sh
+[roxanne@db srv]$ sudo chmod 744 tp3_db_dump.sh
+[roxanne@db srv]$ ls -l
+total 4
+-rwxr--r--. 1 root root 696 Nov 19 10:49 tp3_db_dump.sh```
 
 > On utilise la notation américaine de la date `yymmdd` avec l'année puis le mois puis le jour, comme ça, un tri alphabétique des fichiers correspond à un tri dans l'ordre temporel :)
 
@@ -157,10 +165,55 @@ Done too
 - cet utilisateur sera celui qui lancera le script
 - le dossier `/srv/db_dumps/` doit appartenir au user `db_dumps`
 
+```sh
+[roxanne@db ~]$ sudo useradd db_dumps -m -d /srv/db_dumps -s /usr/bin/nologin
+useradd: Warning: missing or non-executable shell '/usr/bin/nologin'
+Creating mailbox file: File exists
+```
+
+```sh
+[roxanne@db srv]$ ls -l
+total 4
+[...]
+-rwxr--r--. 1 root     root     698 Nov 19 10:53 tp3_db_dump.sh
+```
+
+```sh
+[roxanne@db srv]$ sudo chown db_dumps:db_dumps tp3_db_dump.sh
+[roxanne@db srv]$ ls -l
+total 4
+[...]
+-rwxr--r--. 1 db_dumps db_dumps 698 Nov 19 10:53 tp3_db_dump.sh
+```
+
 - pour tester l'exécution du script en tant que l'utilisateur `db_dumps`, utilisez la commande suivante :
 
 ```bash
 $ sudo -u db_dumps /srv/tp3_db_dump.sh
+```
+
+```sh
+[roxanne@db db_dumps]$ sudo -u db_dumps /srv/tp3_db_dump.sh
+Backup started for database - nextcloud.
+Backup successfully completed.
+[roxanne@db db_dumps]$ ls -l
+total 180
+-rw-r--r--. 1 db_dumps db_dumps 152954 Nov 19 11:16 nextcloud_221119_111626.sql
+-rw-r--r--. 1 db_dumps db_dumps  26729 Nov 19 11:18 nextcloud_221119_111840.sql.gz
+```
+
+```sh
+# unzip de la sauvegarde
+[roxanne@db db_dumps]$ sudo gzip -d nextcloud_221119_111840.sql.gz
+[roxanne@db db_dumps]$ cat nextcloud_221119_111840.sql | head -8
+-- MariaDB dump 10.19  Distrib 10.5.16-MariaDB, for Linux (x86_64)
+--
+-- Host: localhost    Database: nextcloud
+-- ------------------------------------------------------
+-- Server version       10.5.16-MariaDB-log
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 ```
 
 ---
@@ -194,9 +247,53 @@ $ ./tp3_db_dump.sh -D nextcloud
 - vous appelerez le service `db-dump.service`
 - assurez-vous qu'il fonctionne en utilisant des commandes `systemctl`
 
+```sh
+# création du service
+[roxanne@db ~]$ cd /etc/systemd/system
+[roxanne@db system]$ sudo nano db_dump.service
+[sudo] password for roxanne:
+[roxanne@db system]$ cat db_dump.service
+[Unit]
+Description=Dump the nextcloud database
+
+[Service]
+ExecStart=/srv/tp3_db_dump.sh
+Type=oneshot
+User=db_dumps
+WorkingDirectory=/srv/db_dumps
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```sh
+# ajustement des permissions du script
+[roxanne@db srv]$ sudo chmod 754 tp3_db_dump.sh
+[roxanne@db srv]$ ls -l
+total 4
+drwxr-xr-x. 2 db_dumps db_dumps 132 Nov 19 11:19 db_dumps
+-rwxr-xr--. 1 db_dumps db_dumps 699 Nov 19 11:15 tp3_db_dump.sh
+```
+
+```sh
+# passage de Selinux en permissive :)
+[roxanne@db srv]$ sudo nano /etc/selinux/config
+```
+
 ```bash
 $ sudo systemctl status db-dump
 $ sudo systemctl start db-dump
+```
+
+```sh
+[roxanne@db ~]$ sudo systemctl start db_dump
+[roxanne@db ~]$ sudo systemctl status db_dump
+○ db_dump.service - Dump the nextcloud database
+     Loaded: loaded (/etc/systemd/system/db_dump.service; enabled; vendor preset: >
+     Active: inactive (dead) since Sat 2022-11-19 12:05:02 CET; 1s ago
+    Process: 1006 ExecStart=/srv/tp3_db_dump.sh (code=exited, status=0/SUCCESS)
+   Main PID: 1006 (code=exited, status=0/SUCCESS)
+        CPU: 43ms
 ```
 
 ➜ **Créez un *timer*** système qui lance le *service* à intervalles réguliers
@@ -220,6 +317,10 @@ WantedBy=timers.target
 
 > [La doc Arch est cool à ce sujet.](https://wiki.archlinux.org/title/systemd/Timers)
 
+```sh
+[roxanne@db system]$ sudo nano db_dump.timer
+```
+
 - une fois le fichier créé :
 
 ```bash
@@ -236,6 +337,48 @@ $ sudo systemctl status db-dump.timer
 $ sudo systemctl list-timers
 ```
 
+```sh
+[roxanne@db system]$ sudo systemctl daemon-reload
+[roxanne@db system]$ sudo systemctl start db_dump.timer
+[roxanne@db system]$ sudo systemctl enable db_dump.timer
+Created symlink /etc/systemd/system/timers.target.wants/db_dump.timer → /etc/systemd/system/db_dump.timer.
+[roxanne@db system]$ sudo systemctl status db_dump.timer
+● db_dump.timer - Run service db_dump
+     Loaded: loaded (/etc/systemd/system/db_dump.timer; enabled; vendor preset: di>
+     Active: active (waiting) since Sat 2022-11-19 12:08:48 CET; 16s ago
+      Until: Sat 2022-11-19 12:08:48 CET; 16s ago
+    Trigger: Sun 2022-11-20 04:00:00 CET; 15h left
+   Triggers: ● db_dump.service
+
+Nov 19 12:08:48 db.tp1.b2 systemd[1]: Started Run service db_dump.
+
+[roxanne@db system]$ sudo systemctl status db_dump.timer
+● db_dump.timer - Run service db_dump
+     Loaded: loaded (/etc/systemd/system/db_dump.timer; enabled; vendor preset: di>
+     Active: active (waiting) since Sat 2022-11-19 12:08:48 CET; 16s ago
+      Until: Sat 2022-11-19 12:08:48 CET; 16s ago
+    Trigger: Sun 2022-11-20 04:00:00 CET; 15h left
+   Triggers: ● db_dump.service
+
+Nov 19 12:08:48 db.tp1.b2 systemd[1]: Started Run service db_dump.
+
+# le timer est bien présent dans la liste
+[roxanne@db system]$ sudo systemctl list-timers
+NEXT                        LEFT       LAST                        PASSED       UN>
+Sat 2022-11-19 12:19:13 CET 8min left  n/a                         n/a          sy>
+Sat 2022-11-19 12:22:00 CET 11min left n/a                         n/a          dn>
+Sun 2022-11-20 00:00:00 CET 11h left   Sat 2022-11-19 10:15:34 CET 1h 55min ago lo>
+Sun 2022-11-20 04:00:00 CET 15h left   n/a                         n/a          db>
+
+4 timers listed.
+Pass --all to see loaded but inactive timers, too.
+```
+
 ➜ **Tester la restauration des données** sinon ça sert à rien :)
 
 - livrez-moi la suite de commande que vous utiliseriez pour restaurer les données dans une version antérieure
+
+```sh
+sudo gzip -d 'nom_du_fichier.sql.gz'
+cat 'nom_du_fichier.sql'
+```
