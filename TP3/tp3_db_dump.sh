@@ -18,7 +18,7 @@ echo "Backup started for database - ${db}."
 mysqldump -h ${ip_serv} -u ${user} -p${passwd} --skip-lock-tables --databases ${db} > $outputpath
 if [[ $? == 0 ]]
 then
-        gzip -c $outputpath > '${outputpath}.gz'
+        tar -cf '${outputpath}.tar.gz' $outputpath
         rm -f $outputpath
         echo "Backup successfully completed."
 else 

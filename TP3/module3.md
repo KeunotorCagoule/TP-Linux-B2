@@ -44,6 +44,14 @@ Query OK, 0 rows affected (0.001 sec)
 
 ➜ **Ecrire le script `bash`**
 
+```sh
+[roxanne@db srv]$ sudo dnf install tar -y
+Rocky Linux 9 - BaseOS                             7.6 kB/s | 3.6 kB     00:00
+[...]
+
+Complete!
+```
+
 - il s'appellera `tp3_db_dump.sh`
 - il devra être stocké dans le dossier `/srv` sur la machine `db.tp2.linux`
 - le script doit commencer par un *shebang* qui indique le chemin du programme qui exécutera le contenu du script
@@ -379,6 +387,6 @@ Pass --all to see loaded but inactive timers, too.
 - livrez-moi la suite de commande que vous utiliseriez pour restaurer les données dans une version antérieure
 
 ```sh
-sudo gzip -d 'nom_du_fichier.sql.gz'
+sudo tar -xf 'nom_du_fichier.tar.gz'
 cat 'nom_du_fichier.sql'
 ```
