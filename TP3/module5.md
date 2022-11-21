@@ -8,6 +8,10 @@ L'outil qu'on va utiliser est [Netdata](https://learn.netdata.cloud/docs/agent/p
 
 Installez-le sur `web.tp2.linux` et `db.tp2.linux`.
 
+```sh
+# les commandes étant les mêmes sur la machine web et la machine db, il n'y aura que la machine web pour ne pas surcharger le rendu
+```
+
 Une fois en place, Netdata déploie une interface un Web pour avoir moult stats en temps réel, utilisez une commande `ss` pour repérer sur quel port il tourne.
 
 Utilisez votre navigateur pour visiter l'interface web de Netdata `http://<IP_VM>:<PORT_NETDATA>`.
