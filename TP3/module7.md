@@ -49,4 +49,91 @@ Nov 21 12:12:59 web.tp2.linux fail2ban-server[3676]: Server ready
 ```sh
 # modification du fichier de configuration de Fail2Ban
 [roxanne@web ~]$ sudo vim /etc/fail2ban/jail.local
+[roxanne@web ~]$ cat /etc/fail2ban/jail.local | grep ignore
+[...]
+# "ignoreip" can be a list of IP addresses, CIDR masks or DNS hosts. Fail2ban
+ignoreip = 127.0.0.1 ::1
+[...]
+```
+
+```sh
+# déplcement du fichier de configuration de Fail2Ban pour le faire fonctionner avec firewalld au lieu de iptables
+[roxanne@web ~]$ sudo mv /etc/fail2ban/jail.d/00-firewalld.conf /etc/fail2ban/jail.d/00-firewalld.local
+```
+
+```sh
+# restart du service
+[roxanne@web ~]$ sudo systemctl restart fail2ban
+```
+
+```sh
+# modification du fichier de configuration de Fail2Ban
+[roxanne@web ~]$ sudo vim /etc/fail2ban/jail.d/sshd.local
+[roxanne@web ~]$ cat /etc/fail2ban/jail.d/sshd.local
+[sshd]
+enabled = true
+
+bantime = -1
+maxretry = 3
+findtime = 1m
+```
+
+```sh
+# restart du service
+[roxanne@web ~]$ sudo systemctl restart fail2ban
+
+# vérification du fonctionnement
+[roxanne@web ~]$ sudo fail2ban-client status
+Status
+|- Number of jail:      1
+`- Jail list:   sshd
+
+# Vérification de l'override des valeurs par défaut
+[roxanne@web ~]$ sudo fail2ban-client get sshd maxretry
+3
+```
+
+```sh
+# vérfication du fonctionnement de Fail2Ban
+[roxanne@db ~]$ ssh roxanne@10.102.1.11
+The authenticity of host '10.102.1.11 (10.102.1.11)' can't be established.
+ED25519 key fingerprint is SHA256:AEROsrvBiVHyJp9/E5DIQE1RMlYmdwG6Zb7x0FnJOq0.
+This key is not known by any other names
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '10.102.1.11' (ED25519) to the list of known hosts.
+roxanne@10.102.1.11's password:
+Permission denied, please try again.
+roxanne@10.102.1.11's password:
+Permission denied, please try again.
+roxanne@10.102.1.11's password:
+roxanne@10.102.1.11: Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password).
+```
+
+```sh
+# On affiche la règle de blocage (ban) dans le firewall
+[roxanne@web ~]$ sudo firewall-cmd --list-rich-rules
+rule family="ipv4" source address="10.102.1.12" port port="ssh" protocol="tcp" reject type="icmp-port-unreachable"
+
+# On vérifie également dans fail2ban
+[roxanne@web ~]$ sudo fail2ban-client status sshd
+Status for the jail: sshd
+|- Filter
+|  |- Currently failed: 0
+|  |- Total failed:     3
+|  `- Journal matches:  _SYSTEMD_UNIT=sshd.service + _COMM=sshd
+`- Actions
+   |- Currently banned: 1
+   |- Total banned:     1
+   `- Banned IP list:   10.102.1.12
+```
+
+```sh
+# On unban à l'aide cette commande
+[roxanne@web ~]$ sudo fail2ban-client unban 10.102.1.12
+1
+
+# On vérifie que le ban est levé
+[roxanne@web ~]$ sudo firewall-cmd --list-rich-rules
+
+[roxanne@web ~]$
 ```
