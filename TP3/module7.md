@@ -11,6 +11,10 @@ Faites en sorte que :
 - afficher la ligne dans le firewall qui met en place le ban
 - lever le ban avec une commande liée à fail2ban
 
+```sh
+# comme les commandes sont les mêmes pour les autres machines, afin de ne pas surcharger le tp je ne les ai pas mises dedans
+```
+
 > Vous pouvez vous faire ban en effectuant une connexion SSH depuis `web.tp2.linux` vers `db.tp2.linux` par exemple, comme ça vous gardez intacte la connexion de votre PC vers `db.tp2.linux`, et vous pouvez continuer à bosser en SSH.
 
 ```sh
