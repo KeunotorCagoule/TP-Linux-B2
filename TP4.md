@@ -62,6 +62,54 @@ A chaque machine déployée, vous **DEVREZ** vérifier la 📝**checklist**📝 
   - avec la commande : `sudo usermod -aG docker $(whoami)`
   - déconnectez-vous puis relancez une session pour que le changement prenne effet
 
+```sh
+# montage du repo
+[roxanne@docker ~]$ sudo dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+[sudo] password for roxanne:
+Adding repo from: https://download.docker.com/linux/centos/docker-ce.repo
+```
+
+```sh
+# installation de la dernière version de docker
+[roxanne@docker ~]$ sudo dnf install docker-ce docker-ce-cli containerd.io docker-compose-plugin
+Docker CE Stable - x86_64                   816  B/s |  12 kB     00:15
+Last metadata expiration check: 0:00:15 ago on Thu 24 Nov 2022 11:13:12 CET.
+Dependencies resolved.
+[...]
+
+Complete!
+```
+
+```sh
+# démarrage du service docker
+[roxanne@docker ~]$ sudo systemctl start docker
+[sudo] password for roxanne:
+[roxanne@docker ~]$ sudo systemctl enable docker
+Created symlink /etc/systemd/system/multi-user.target.wants/docker.service → /usr/lib/systemd/system/docker.service.
+```
+
+```sh
+[roxanne@docker ~]$ sudo systemctl enable docker
+Created symlink /etc/systemd/system/multi-user.target.wants/docker.service → /usr/lib/systemd/system/docker.service.
+[roxanne@docker ~]$ sudo docker run hello-world
+Unable to find image 'hello-world:latest' locally
+latest: Pulling from library/hello-world
+2db29710123e: Pull complete
+Digest: sha256:faa03e786c97f07ef34423fccceeec2398ec8a5759259f94d99078f264e9d7af
+Status: Downloaded newer image for hello-world:latest
+
+Hello from Docker!
+[...]
+
+For more examples and ideas, visit:
+ https://docs.docker.com/get-started/
+```
+
+```sh
+# ajout de l'utilisateur roxanne au groupe docker
+[roxanne@docker ~]$ sudo usermod -a -G docker roxanne
+```
+
 ## 2. Vérifier l'install
 
 ➜ **Vérifiez que Docker est actif est disponible en essayant quelques commandes usuelles :**
@@ -135,6 +183,58 @@ $ docker run --name web -d -v /path/to/html:/usr/share/nginx/html -p 8888:80 ngi
   - le processus exécuté par le conteneur doit être un utilisateur de votre choix (pas `root`)
 
 > Tout se fait avec des options de la commande `docker run`.
+
+```sh
+[roxanne@docker ~]$ docker run --name web -m="1g" --cpus="1.0" -d -v /var/nginx/html:/usr/share/nginx/html -p 8888:80 nginx
+Unable to find image 'nginx:latest' locally
+latest: Pulling from library/nginx
+a603fa5e3b41: Pull complete
+c39e1cda007e: Pull complete
+90cfefba34d7: Pull complete
+a38226fb7aba: Pull complete
+62583498bae6: Pull complete
+9802a2cfdb8d: Pull complete
+Digest: sha256:e209ac2f37c70c1e0e9873a5f7231e91dcd83fdf1178d8ed36c2ec09974210ba
+Status: Downloaded newer image for nginx:latest
+bf75a962ec491c08c50581121ff1c5a326048e83e71c348799ec601438cb682b
+```
+
+```sh
+# création du fichier de conf
+[roxanne@docker html]$ sudo vim index.html
+[roxanne@docker html]$ cat index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tenders</title>
+</head>
+<body>
+        <h1>omelette</h1>
+</body>
+</html>
+```
+
+```sh
+# ouverture du port 8888
+[roxanne@docker html]$ sudo firewall-cmd --add-port=8888/tcp --permanent
+success
+[roxanne@docker html]$ sudo firewall-cmd --reload
+success
+
+# accès à la page web
+[roxanne@docker html]$ curl 10.104.1.11:8888
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tenders</title>
+</head>
+<body>
+        <h1>omelette</h1>
+</body>
+</html>
+```
 
 # II. Images
 
