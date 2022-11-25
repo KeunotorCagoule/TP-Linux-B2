@@ -236,6 +236,38 @@ success
 </html>
 ```
 
+```sh
+# création du fichier de conf nginx
+[roxanne@docker nginx]$ sudo vim custom.conf
+[sudo] password for roxanne:
+[roxanne@docker nginx]$ cat custom.conf
+server {
+  # on définit le port où NGINX écoute dans le conteneur
+  listen 80;
+
+  # on définit le chemin vers la racine web
+  # dans ce dossier doit se trouver un fichier index.html
+  location / {
+        root /var/www/tp4;
+  }
+}
+```
+
+```sh
+# supression du conteneur web
+[roxanne@docker nginx]$ docker run --name web -m="1g" --cpus="1.0" -d -v /var/nginx/html:/usr/share/nginx/html -v /var/nginx/nginx/custom.conf:/etc/nginx/conf.d/custom.conf -p 8888:80 nginx
+docker: Error response from daemon: Conflict. The container name "/web" is already in use by container "bf75a962ec491c08c50581121ff1c5a326048e83e71c348799ec601438cb682b". You have to remove (or rename) that container to be able to reuse that name.
+See 'docker run --help'.
+[roxanne@docker nginx]$ docker stop web
+web
+[roxanne@docker nginx]$ docker rm web
+web
+
+# re-création du conteneur web
+[roxanne@docker nginx]$ docker run --name web -m="1g" --cpus="1.0" -d -v /var/nginx/html:/usr/share/nginx/html -v /var/nginx/nginx/custom.conf:/etc/nginx/conf.d/custom.conf -p 8888:80 nginx
+361110a988e4c99e7a2ddddd3362d47507d1439e75c0d1fa6054ec0f57108106
+```
+
 # II. Images
 
 La construction d'image avec Docker est basée sur l'utilisation de fichiers `Dockerfile`.
@@ -330,13 +362,107 @@ $ curl <IP_VM>:8888
   - installation de Apache
   - page d'accueil Apache HTML personnalisée
 
-📁 **`Dockerfile`**
+```sh
+# création du dossier apache
+[roxanne@docker ~]$ mkdir apache
+[roxanne@docker ~]$ cd apache/
+[roxanne@docker apache]$ sudo cp /var/nginx/html/index.html .
+[sudo] password for roxanne:
+[roxanne@docker apache]$ ls
+index.html
+
+# attribution du fichier index.html à l'utilisateur roxanne 
+[roxanne@docker apache]$ sudo chown roxanne:roxanne index.html
+
+# création du fichier de conf personnalisé d'apache
+[roxanne@docker apache]$ vim custom.conf
+[roxanne@docker apache]$ cat custom.conf
+# on définit un port sur lequel écouter
+Listen 80
+
+# on charge certains modules Apache strictement nécessaires à son bon fonctionnement
+LoadModule mpm_event_module "/usr/lib/apache2/modules/mod_mpm_event.so"
+LoadModule dir_module "/usr/lib/apache2/modules/mod_dir.so"
+LoadModule authz_core_module "/usr/lib/apache2/modules/mod_authz_core.so"
+
+# on indique le nom du fichier HTML à charger par défaut
+DirectoryIndex index.html
+# on indique le chemin où se trouve notre site
+DocumentRoot "/var/www/html/"
+
+# quelques paramètres pour les logs
+ErrorLog "logs/error.log"
+LogLevel warn
+```  
+
+```sh
+[roxanne@docker apache]$ vim Dockerfile
+[roxanne@docker apache]$ cat Dockerfile
+FROM ubuntu
+RUN apt update -y
+RUN apt install apache2 -y
+RUN mkdir -p /var/www/html
+
+
+ADD index.html /var/www/html/index.html
+ADD custom.conf /etc/apache2/apache2.conf
+
+RUN mkdir -p /etc/apache2/logs
+RUN chmod 755 /etc/apache2/logs
+
+CMD ["apache2", "-D", "FOREGROUND"]
+```
+
+📁 [Dockerfile](./Dockerfile)
+
+```sh
+[roxanne@docker apache]$ docker build . -t own_apache
+Sending build context to Docker daemon  4.608kB
+Step 1/9 : FROM ubuntu
+[...]
+Successfully built bac43a7e4cd9
+Successfully tagged own_apache:latest
+
+# vérification de l'image créée
+[roxanne@docker apache]$ docker images
+REPOSITORY    TAG       IMAGE ID       CREATED              SIZE
+own_apache    latest    bac43a7e4cd9   About a minute ago   225MB
+[...]  
+```
+
+```sh
+# lancement du conteneur
+[roxanne@docker apache]$ docker run -d -p 8888:80 own_apache
+dc0efc01cf93dacc02371e2c1885aa0ccd222ffbb55f9086ac72f74db44d7f16
+[roxanne@docker apache]$ docker ps
+CONTAINER ID   IMAGE        COMMAND                  CREATED         STATUS         PORTS                                   NAMES
+dc0efc01cf93   own_apache   "apache2 -D FOREGROU…"   8 seconds ago   Up 7 seconds   0.0.0.0:8888->80/tcp, :::8888->80/tcp   nervous_ride
+```
+
+```sh
+# vérification du fonctionnement
+[roxanne@docker apache]$ curl 10.104.1.11:8888
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tenders</title>
+</head>
+<body>
+        <h1>omelette</h1>
+</body>
+</html>
+```
 
 # III. `docker-compose`
 
 ## 1. Intro
 
 ➜ **Installer `docker-compose` sur la machine**
+
+```sh
+#Done
+```
 
 - en suivant [la doc officielle](https://docs.docker.com/compose/install/)
 
