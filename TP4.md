@@ -538,4 +538,158 @@ Peu importe le langage aussi ! Go, Python, PHP (désolé des gros mots), Node (j
   - la commande `docker build` pour build l'image
   - la commande `docker-compose` pour lancer le(s) conteneur(s)
 
+```sh
+# installation de git pour pouvoir cloner l'application
+[roxanne@docker ~]$ sudo dnf install git-all
+[sudo] password for roxanne:
+Rocky Linux 9 - BaseOS                      8.4 kB/s | 3.6 kB     00:00
+Rocky Linux 9 - AppStream                   8.9 kB/s | 3.6 kB     00:00
+Rocky Linux 9 - Extras                      7.2 kB/s | 2.9 kB     00:00
+Dependencies resolved.
+[...]
+Complete!
+``` 
+
+```sh
+# clonage de l'application
+[roxanne@docker ~]$ git clone https://ytrack.learn.ynov.com/git/AVASSEUR2/Groupie-Tracker.git
+Cloning into 'Groupie-Tracker'...
+Username for 'https://ytrack.learn.ynov.com': roxanne.roulland@ynov.com
+Password for 'https://roxanne.roulland@ynov.com@ytrack.learn.ynov.com':
+remote: Enumerating objects: 491, done.
+remote: Counting objects: 100% (491/491), done.
+remote: Compressing objects: 100% (468/468), done.
+remote: Total 491 (delta 305), reused 0 (delta 0), pack-reused 0
+Receiving objects: 100% (491/491), 236.58 KiB | 700.00 KiB/s, done.
+Resolving deltas: 100% (305/305), done.
+```
+
+```sh
+# création d'un .dockerignore pour qu'on ne puisse pas modifier le repo git depuis le conteneur
+[roxanne@docker ~]$ cd Groupie-Tracker/
+[roxanne@docker Groupie-Tracker]$ vim .dockerignore
+[roxanne@docker Groupie-Tracker]$ cat .dockerignore
+.git
+```
+
+```sh
+# création du Dockerfile (Image)
+[roxanne@docker Groupie-Tracker]$ vim Dockerfile
+[roxanne@docker Groupie-Tracker]$ cat Dockerfile
+FROM golang
+RUN mkdir -p /var/www/html
+
+WORKDIR /usr/src/app
+
+COPY . .
+
+EXPOSE 80
+
+CMD ["go", "run", "./server/server.go"]
+```
+
+```sh
+# build de l'image de groupie_tracker
+[roxanne@docker Groupie-Tracker]$ docker build . -t groupie_tracker
+Sending build context to Docker daemon  256.5kB
+Step 1/6 : FROM golang
+latest: Pulling from library/golang
+a8ca11554fce: Pull complete
+e4e46864aba2: Pull complete
+c85a0be79bfb: Pull complete
+195ea6a58ca8: Pull complete
+52908dc1c386: Pull complete
+a2b47720d601: Pull complete
+14a70245b07c: Pull complete
+Digest: sha256:dc76ef03e54c34a00dcdca81e55c242d24b34d231637776c4bb5c1a8e8514253
+Status: Downloaded newer image for golang:latest
+ ---> 8ee516e10ce0
+Step 2/6 : RUN mkdir -p /var/www/html
+ ---> Running in a82abc3de666
+Removing intermediate container a82abc3de666
+ ---> ec12f2d8da88
+Step 3/6 : WORKDIR /usr/src/app
+ ---> Running in 60402cdf9dfc
+Removing intermediate container 60402cdf9dfc
+ ---> 30169c8825e1
+Step 4/6 : COPY . .
+ ---> c18bf8267542
+Step 5/6 : EXPOSE 80
+ ---> Running in 890b5081e7df
+Removing intermediate container 890b5081e7df
+ ---> 2841766bb0fb
+Step 6/6 : CMD ["go", "run", "./server/server.go"]
+ ---> Running in 6d6cb5a824a8
+Removing intermediate container 6d6cb5a824a8
+ ---> 1d5bf6e18e70
+Successfully built 1d5bf6e18e70
+Successfully tagged groupie_tracker:latest
+```
+
+```sh
+# création du docker-compose.yml
+[roxanne@docker Groupie-Tracker]$ vim docker-compose.yml
+[roxanne@docker Groupie-Tracker]$ cat docker-compose.yml
+services:
+  groupie:
+    image: groupie_tracker
+    restart: always
+    ports:
+      - 8888:80
+```
+
+```sh
+# lancement du conteneur
+[roxanne@docker Groupie-Tracker]$ docker compose up -d
+[+] Running 1/1
+ ⠿ Container groupie-tracker-groupie-1  Started                        0.3s
+[roxanne@docker Groupie-Tracker]$ docker ps
+CONTAINER ID   IMAGE             COMMAND                  CREATED          STATUS         PORTS                                   NAMES
+c40a0c377fb4   groupie_tracker   "go run ./server/ser…"   51 seconds ago   Up 7 seconds   0.0.0.0:8888->80/tcp, :::8888->80/tcp   groupie-tracker-groupie-1
+```
+
+```sh
+# vérification que l'application est bien lancée
+[roxanne@docker Groupie-Tracker]$ curl 10.104.1.11:8888
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" href="/assets/images/favicon.png" type="image/png">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Groupie Tracker</title>
+    <link rel="stylesheet" href="/css/globals.css">
+    <link rel="stylesheet" href="/css/animations.css">
+    <link rel="stylesheet" href="/css/index.css">
+</head>
+
+<body>
+    <section class="landing">
+        <div id="toggler"></div>
+[...]
+
+[roxanne@docker Groupie-Tracker]$ curl localhost:8888
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" href="/assets/images/favicon.png" type="image/png">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Groupie Tracker</title>
+    <link rel="stylesheet" href="/css/globals.css">
+    <link rel="stylesheet" href="/css/animations.css">
+    <link rel="stylesheet" href="/css/index.css">
+</head>
+
+<body>
+    <section class="landing">
+        <div id="toggler"></div>
+[...]
+```
+
 📁 📁 `app/Dockerfile` et `app/docker-compose.yml`. Je veux un sous-dossier `app/` sur votre dépôt git avec ces deux fichiers dedans :)
+[Dossier App ici](./app)

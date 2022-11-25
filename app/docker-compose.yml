@@ -1,0 +1,6 @@
+services:
+  groupie:
+    image: groupie_tracker
+    restart: always
+    ports:
+      - 8888:80
