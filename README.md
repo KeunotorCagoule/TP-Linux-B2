@@ -4,4 +4,4 @@
 - [TP 2 : Gestion de service](TP2.md)
 - [TP 3 : Amélioration de la solution NextCloud](TP3.md)
 - [TP 4 : Conteneurs](TP4.md)
-- [TP5 : Funkwhale](https://github.com/KeunotorCagoule/Funkwhale)
+- [TP5 : Gitea](https://github.com/KeunotorCagoule/Gitea)
